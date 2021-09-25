@@ -1,3 +1,4 @@
+#import mtTkinter as tkinter
 import tkinter
 import tkinter.font as tkFont
 import cv2
@@ -30,9 +31,9 @@ load = Image.open(r'C:/Users/Douge/Pictures/spectrum.jfif')
 
 
 class App:
-	DEFAULT_CALIBRATION = ((72, 405), (304, 532))
+	#DEFAULT_CALIBRATION = ((72, 405), (304, 532))
 
-	def __init__(self, window, graphdata, video_source=0):
+	def __init__(self, window, video_source=0):
 		#self.camera = multiprocessing.Process(target=__init__)
 		self.window = window
 
@@ -161,10 +162,11 @@ class App:
 		#self.main_process = os.getpid()
 		#graphdata = multiprocessing.Queue()
 		#self.leds = multiprocessing.Process(target=self.vid.calibrate,args =[graphdata])
-		self.leds = Process(target=MyVideoCapture.calibrate,args=[self.data()])
+		#print(self.data())
+		#self.leds = Process(target=MyVideoCapture.calibrate,args=[self,self.data()])
 		#calibrate button
 		self.calbutton = tkinter.Button(self.control_frame, text="Calibrate", width=6,
-                                  fg="yellow", bg="red", activebackground='red', command=self.leds.start)
+                                  fg="yellow", bg="red", activebackground='red', command=partial(self.vid.calibrate,self,self.data(self.vid.get_graph())))#command=self.leds.start)
 		self.calbutton.grid(row=4, column=0)
 
 
@@ -194,9 +196,14 @@ class App:
 			self.canvas1.create_image(0, 0, image=self.photo2, anchor=tkinter.NW)
 		self.window.after(self.delay, self.update)
 
-	def data(self):
-		ret2, graphdata = self.vid.get_graph()
-		return graphdata
+	def data(self,graphdata):
+		#ret2, graphdata = self.vid.get_graph()
+		#return graphdata
+		
+		thresh = 20
+		print(graphdata[2])
+		indexes = peakutils.indexes(graphdata[2], thres=thresh/max(graphdata[2]), mindist=50)
+		return indexes
 
 
 
@@ -235,7 +242,7 @@ class MyVideoCapture:
 		self.height = self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
 		#print(self.width)
 
-	def calibrate(self,graphdata):
+	def calibrate(self,indexes):
 
 		def shiftR(distR, height):
 			R = deque(height)  # turn list into deque
@@ -256,15 +263,16 @@ class MyVideoCapture:
 		pointR = 618.5
 		pointG = 568.5
 		pointY = 587.5
-		maxRed = max(graphdata[1])
+		maxRed = indexes[0]
 		print(maxRed)
-		maxG = max(graphdata[1])
+		maxG = max(indexes[0])
 		print(maxG)
+		sleep(3)
 		#MyVideoCapture.get_graph(self)
 		#print(graphdata[1])
 		calibration = ((pointR, maxRed), (pointG, maxG))
 		print(calibration)
-		self.recalibrate(calibration)
+		#self.recalibrate(calibration)
 
 	def recalibrate(self, calibration):
 		self.calibration = calibration
@@ -434,6 +442,7 @@ class MyVideoCapture:
 
 				#find peaks and label them
 				thresh = int(self.thresh)  # make sure the data is int.
+				
 				indexes = peakutils.indexes(
 					self.intensity, thres=thresh/max(self.intensity), min_dist=self.mindist)
 				for i in indexes:
@@ -452,9 +461,9 @@ class MyVideoCapture:
 				graphdata.append(graph)
 				graphdata.append(self.wavelengthdata)
 				graphdata.append(self.intensity)
-
-				#print("data")
-				#print(graphdata)
+				
+				#print(indexes)
+				#print(height)
 				#print("intensity")
 				#print(self.wavelengthdata)
 				return (ret, graphdata)
@@ -470,5 +479,5 @@ class MyVideoCapture:
 			self.vid.release()
 
 # Create a window and pass it to the Application object
-App(tkinter.Tk(), "PySpectrometer")
+App(tkinter.Tk())#, "PySpectrometer")
 #pi
