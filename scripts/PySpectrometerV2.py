@@ -1,49 +1,37 @@
-#import mtTkinter as tkinter
 import tkinter
 import tkinter.font as tkFont
 import cv2
-import PIL
 from PIL import ImageTk, Image
-import PIL.Image
-import PIL.ImageTk
 import time
+from time import sleep
 import numpy as np
 from scipy.signal import savgol_filter
 import peakutils
-#import base64
-#import gpiozero
-#import RPi.GPIO as GPIO
-#from gpiozero.pins.mock import MockFactory
-#gpiozero.Device.pin_factory = MockFactory()
-from gpiozero import LED
-from time import sleep
-from collections import deque
+import base64
 import argparse
-#from functools import partial
-#import multiprocessing
-#from multiprocess import Process, Queue
-#import PyMata
-
+import RPi.GPIO as GPIO
 
 #load = Image.open(r'/home/pi/Desktop/spectrum.png')
 load = Image.open(r'C:/Users/Douge/Pictures/spectrum.jfif')
 
 
-
 class App:
-	#DEFAULT_CALIBRATION = ((72, 405), (304, 532))
+	DEFAULT_CALIBRATION = ((72, 405), (304, 532))
 
 	def __init__(self, args, window, window_title, video_source=0):
-		#self.camera = multiprocessing.Process(target=__init__)
 		self.window = window
 
-		self.window.geometry('660x570')
-		self.window.resizable(width=True, height=False)
-		self.window.title("Pyspectrometer")
+		self.window.geometry("660x570")
+		self.window.resizable(width=False, height=False)
+		self.window.title(window_title)
 		self.video_source = video_source
 		self.def_font = tkinter.font.nametofont("TkDefaultFont")
 		self.def_font.config(size=9)
-		self.vid = MyVideoCapture(self.video_source)
+		self.vid = MyVideoCapture(
+			args.calibration or App.DEFAULT_CALIBRATION, self.video_source)
+
+
+
 
 		def peakwidth(event):
 			# set object value when peakwidth slider moved.
@@ -84,13 +72,6 @@ class App:
 				setattr(self.vid, 'holdpeaks', False)  # set holdpeaks true
 				self.filt.configure(state="active")
 
-
-
-
-		#self.leds = multiprocessing.Process(target=calibrate)
-		#self.leds.start()
-		#self.leds.join()
-
 		# Create frames
 		self.top_frame = tkinter.Frame(window, width=640, height=240)
 		self.top_frame.grid(row=0, column=0, padx=10, pady=5)
@@ -101,17 +82,26 @@ class App:
 		#control frame within frame
 		self.control_frame = tkinter.Frame(self.top_frame, width=324)
 		self.control_frame.grid(row=0, column=0, padx=0, pady=0)
-		self.decoration = tkinter.Canvas(self.control_frame, width=300, height=146, borderwidth=2, relief="raised")
+		self.decoration = tkinter.Canvas(
+			self.control_frame, width=300, height=146, borderwidth=2, relief="raised")
 		self.decoration.grid(row=0, column=0, columnspan=3, padx=0, pady=0)
 
 		#control panel items:
 		# load the  image file
 		self.decorate = ImageTk.PhotoImage(load)
 		self.decoration.create_image(2, 2, image=self.decorate, anchor=tkinter.NW)
-
 		#calibrate button
-		#self.calbutton = tkinter.Button(self.control_frame, text="Calibrate", width=6, fg="yellow",bg="red", activebackground='red', command=slef.leds)#partial(leds, self, graphdata))
-		#self.calbutton.grid(row=4, column=0)
+		self.calbutton = tkinter.Button(self.control_frame, text="Calibrate", width=6,
+		                                fg="yellow", bg="red", activebackground='red', command=lambda: self.calibrate(self.data()))
+		self.calbutton.grid(row=4, column=0)
+
+		# display calibration data if provided
+		if args.calibration is not None:
+			#self.marker1.configure(text=str(args.calibration[0][0]))
+			#self.marker2.configure(text=str(args.calibration[1][0]))
+			#self.txt1.insert(0, str(args.calibration[0][1]))
+			#self.txt2.insert(0, str(args.calibration[1][1]))
+			self.calibrate()  # just to update the botton state, really
 
 		# Create a canvas that can fit the above video source size
 		#weird, we have to sub 3 pixels to have it fit?
@@ -122,15 +112,18 @@ class App:
 		#botttom canvas
 		# Create a canvas that can fit the above video source size
 		#weird, we have to sub 3 pixels to have it fit?
-		self.canvas1 = tkinter.Canvas(self.bottom_frame, width=634,height=252, borderwidth=2, relief="sunken", cursor="tcross")
-		self.canvas1.grid(row=0, column=0, padx=0, pady=0, columnspan=5)
+		self.canvas1 = tkinter.Canvas(self.bottom_frame, width=634,
+		                              height=252, borderwidth=2, relief="sunken", cursor="tcross")
+		#self.canvas1.bind("<Button-1>", select_points)
+		self.canvas1.grid(row=0, column=0, padx=0, pady=0, columnspan=8)
 
 		#peaks label
 		self.lbpeak = tkinter.Label(self.bottom_frame, text="Peak Width:")
 		self.lbpeak.grid(row=1, column=0, pady=20, sticky="nw")
 
 		#slider for peak width
-		self.peakwidth = tkinter.Scale(self.bottom_frame, from_=0, to=100, orient="horizontal", command=peakwidth)
+		self.peakwidth = tkinter.Scale(
+			self.bottom_frame, from_=0, to=100, orient="horizontal", command=peakwidth)
 		self.peakwidth.grid(row=1, column=1, padx=0, pady=2, sticky="n")
 		self.peakwidth.set(50)
 
@@ -139,7 +132,8 @@ class App:
 		self.lbthresh.grid(row=1, column=2, pady=20, sticky="n")
 
 		#slider for threshold
-		self.thresh = tkinter.Scale(self.bottom_frame, from_=0, to=100, orient="horizontal", command=peakthresh)
+		self.thresh = tkinter.Scale(
+			self.bottom_frame, from_=0, to=100, orient="horizontal", command=peakthresh)
 		self.thresh.grid(row=1, column=3, padx=0, pady=2, sticky="n")
 		self.thresh.set(20)
 
@@ -148,95 +142,103 @@ class App:
 		self.lbfilt.grid(row=1, column=4, pady=20, sticky="n")
 
 		#Slider for filter
-		self.filt = tkinter.Scale(self.bottom_frame, from_=0,to=16, orient="horizontal", command=savfilter)
+		self.filt = tkinter.Scale(self.bottom_frame, from_=0,
+		                          to=16, orient="horizontal", command=savfilter)
 		self.filt.grid(row=1, column=5, padx=0, pady=2, sticky="n")
 		self.filt.set(7)
 
 		#Peak hold
-		self.peakholdbtn = tkinter.Button(self.bottom_frame, text="Peak Hold", width=6,fg="black", bg="yellow", activebackground='yellow', command=peakhold)
+		self.peakholdbtn = tkinter.Button(self.bottom_frame, text="Peak Hold", width=6,
+		                                  fg="black", bg="yellow", activebackground='yellow', command=peakhold)
 		self.peakholdbtn.grid(row=1, column=6, padx=0, pady=0)
 
-		#with concurrent.futures.ProcessPoolExecutor() as executor():
-            #leds = executor.submit(calibrate, self, graphdata)
-
-		#self.main_process = os.getpid()
-		#graphdata = multiprocessing.Queue()
-		#self.leds = multiprocessing.Process(target=self.vid.calibrate,args =[graphdata])
-		#print(self.data())
-		#self.leds = Process(target=MyVideoCapture.calibrate,args=[self,self.data()])
-		#calibrate button
-		myIndex = self.index()
-		#print(myIndex)
-		self.calbutton = tkinter.Button(self.control_frame, text="Calibrate", width=6,
-                                  fg="yellow", bg="red", activebackground='red', command= lambda : self.vid.calibrate(myIndex))#partial(self.vid.calibrate,self,self.index()))#command=self.leds.start)
-		self.calbutton.grid(row=4, column=0)
-
-		if args.calibration is not None:
-			self.vid.calibrate() # just to update the botton state, really
-
-
+		#Snapshot the graph
+		self.snapshotbtn = tkinter.Button(
+			self.bottom_frame, text="Snapshot", width=6, command=snapshot)
+		self.snapshotbtn.grid(row=1, column=7, padx=0, pady=0)
 
 		# After it is called once, the update method will be automatically called every delay milliseconds
-		if __name__ == '__main__':
-			#self.vid = cv2.VideoCapture(0)#, cv2.CAP_DSHOW)
+		self.delay = 15
+		self.update()
 
-			self.delay = 15
-			self.update()
+		self.window.mainloop()
 
-			self.window.mainloop()
-
-
-
-
+	def calibrate(self,graphdata):
+		#check the data is set, and modify the vars in self.vid...
+		pointR = 618.5
+		pointG = 568.5
+		GPIO.setmode(GPIO.BCM)
+		GPIO.setwarnings(False)
+		GPIO.setup(14, GPIO.OUT)
+		GPIO.setup(15, GPIO.OUT)
+		GPIO.output(14, GPIO.HIGH)
+		sleep(0.5)
+		maxRed = peakutils.peak.indexes(graphdata[2], thres=0.999, min_dist=50)
+		print(maxRed)
+		GPIO.output(14, GPIO.LOW)
+		GPIO.output(15, GPIO.HIGH)
+		sleep(0.5)
+		maxG = peakutils.peak.indexes(graphdata[2], thres=0.999, min_dist=50)
+		GPIO.output(15, GPIO.LOW)
+		calibration = ((pointR, int(maxRed)),
+                       (pointG, int(maxG)))
+		self.vid.recalibrate(calibration)
+		self.calbutton.configure(text="Calibrated", fg="black",
+                                    bg="yellow", activebackground='yellow')
 
 	def update(self):
 		# Get a frame from the video source
 		ret, frame = self.vid.get_frame()
 		ret2, graphdata = self.vid.get_graph()
 		if ret:
-			self.photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
+			self.photo = ImageTk.PhotoImage(image=Image.fromarray(frame))
 			self.canvas0.create_image(0, 0, image=self.photo, anchor=tkinter.NW)
 		if ret2:
-			self.photo2 = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(graphdata[0]))
+			self.photo2 = ImageTk.PhotoImage(
+				image=Image.fromarray(graphdata[0]))
 			self.canvas1.create_image(0, 0, image=self.photo2, anchor=tkinter.NW)
 		self.window.after(self.delay, self.update)
 
 	def data(self):
 		ret2, graphdata = self.vid.get_graph()
 		return graphdata
-		
-	def index(self):
-		#thresh = 100
-		graphdata = self.data()
-		indexes = peakutils.peak.indexes(graphdata[2], thres=0.999,min_dist=50)#thresh/max(graphdata[2]), min_dist=50)
-		indexes += 300
-		return indexes
-
-
 
 
 class MyVideoCapture:
 	def __init__(self, calibration, video_source=0):
-
 		self.calibration = calibration
 
 		#settings for peak detect
 		self.mindist = 50  # minumum distance between peaks
-		self.thresh = 100  # Threshold
+		self.thresh = 20  # Threshold
 		self.savpoly = 7  # savgol filter polynomial
 		self.intensity = [0] * 636  # array for intensity data...full of zeroes
 		self.holdpeaks = False
 
-		#initial graph points and wavelengths.
-		self.point1 = 72  # 405nm
-		self.nm1 = 405
-		self.point2 = 304  # 650nm
-		self.nm2 = 532
-
 		# Open the video source
-		self.vid = cv2.VideoCapture(video_source, cv2.CAP_DSHOW)
+		self.vid = cv2.VideoCapture(video_source)
 		#Settings
-
+		'''
+		0. CV_CAP_PROP_POS_MSEC Current position of the video file in milliseconds.
+		1. CV_CAP_PROP_POS_FRAMES 0-based index of the frame to be decoded/captured next.
+		2. CV_CAP_PROP_POS_AVI_RATIO Relative position of the video file
+		3. CV_CAP_PROP_FRAME_WIDTH Width of the frames in the video stream.
+		4. CV_CAP_PROP_FRAME_HEIGHT Height of the frames in the video stream.
+		5. CV_CAP_PROP_FPS Frame rate.
+		6. CV_CAP_PROP_FOURCC 4-character code of codec.
+		7. CV_CAP_PROP_FRAME_COUNT Number of frames in the video file.
+		8. CV_CAP_PROP_FORMAT Format of the Mat objects returned by retrieve() .
+		9. CV_CAP_PROP_MODE Backend-specific value indicating the current capture mode.
+		10. CV_CAP_PROP_BRIGHTNESS Brightness of the image (only for cameras).
+		11. CV_CAP_PROP_CONTRAST Contrast of the image (only for cameras).
+		12. CV_CAP_PROP_SATURATION Saturation of the image (only for cameras).
+		13. CV_CAP_PROP_HUE Hue of the image (only for cameras).
+		14. CV_CAP_PROP_GAIN Gain of the image (only for cameras).
+		15. CV_CAP_PROP_EXPOSURE Exposure (only for cameras).
+		16. CV_CAP_PROP_CONVERT_RGB Boolean flags indicating whether images should be converted to RGB.
+		17. CV_CAP_PROP_WHITE_BALANCE Currently unsupported
+		18. CV_CAP_PROP_RECTIFICATION Rectification flag for stereo cameras (note: only supported by DC1394 v 2.x backend currently)
+		'''
 		self.vid.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 		self.vid.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 		self.vid.set(cv2.CAP_PROP_FPS, 25)
@@ -249,42 +251,8 @@ class MyVideoCapture:
 		self.height = self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
 		#print(self.width)
 
-	def calibrate(self,indexes):
-
-		def shiftR(distR, height):
-			R = deque(height)  # turn list into deque
-			R.rotate(distR)    # rotate deque by key
-			return list(R)   # turn deque back into a list
-
-		def shiftG(distG, height):
-			G = deque(height)  # turn list into deque
-			G.rotate(distG)    # rotate deque by key
-			return list(G)   # turn deque back into a list
-
-		def shiftY(distY, height):
-			Y = deque(height)  # turn list into deque
-			Y.rotate(distY)    # rotate deque by key
-			return list(Y)
-	#calibrationLabel = Label(root, text="Spectrometer Calibrated!")
-	#calibrationLabel.grid(row=50, column=100)
-		print(indexes)
-		pointR = 618.5
-		pointG = 568.5
-		pointY = 587.5
-		maxRed = indexes[0]
-		print(maxRed)
-		maxG = indexes[0]
-		print(maxG)
-		sleep(1)
-		#MyVideoCapture.get_graph(self)
-		#print(graphdata[1])
-		calibration = ((pointR, maxRed), (pointG, 400))#maxG))
-		print(calibration)
-		self.recalibrate(calibration)
-
 	def recalibrate(self, calibration):
 		self.calibration = calibration
-
 
 	def get_frame(self):
 		if self.vid.isOpened():
@@ -375,15 +343,15 @@ class MyVideoCapture:
 				#Display a graticule calibrated with cal data
 				#calculate the ranges
 				# how many px between points 1 and 2?
-				pxrange = abs(self.point1-self.point2)
+				pxrange = 636#abs(self.calibration[0][0]-self.calibration[1][0])
 				# how many nm between points 1 and 2?
-				nmrange = abs(self.nm1-self.nm2)
+				nmrange = 345#abs(self.calibration[0][1]-self.calibration[1][1])
 				#how many pixels per nm?
 				pxpernm = pxrange/nmrange
 				#how many nm per pixel?
 				nmperpx = nmrange/pxrange
 				#how many nm is zero on our axis
-				zero = self.nm1-(self.point1/pxpernm)
+				zero = self.calibration[0][1]-(self.calibration[0][0]/pxpernm)
 				scalezero = zero  # we need this unchanged duplicate of zero for later!
 				prevposition = 0
 				textoffset = 12
@@ -426,12 +394,10 @@ class MyVideoCapture:
 					#do a little smoothing of the data
 					self.intensity = savgol_filter(self.intensity, 17, int(self.savpoly))
 				self.intensity = self.intensity.astype(int)
-				#print(self.intensity)
 
 				#now draw the graph
 				#for each index, plot a verital line derived from int
 				#use waveleng_to_rgb to false color the data.
-
 				self.wavelengthdata = []
 				index = 0
 				for i in self.intensity:
@@ -451,7 +417,6 @@ class MyVideoCapture:
 
 				#find peaks and label them
 				thresh = int(self.thresh)  # make sure the data is int.
-				
 				indexes = peakutils.indexes(
 					self.intensity, thres=thresh/max(self.intensity), min_dist=self.mindist)
 				for i in indexes:
@@ -470,17 +435,11 @@ class MyVideoCapture:
 				graphdata.append(graph)
 				graphdata.append(self.wavelengthdata)
 				graphdata.append(self.intensity)
-				
-				#print(indexes)
-				#print(height)
-				#print("intensity")
-				#print(self.wavelengthdata)
 				return (ret, graphdata)
 			else:
 				return (ret, None)
 		else:
 			return (ret, None)
-
 
 	# Release the video source when the object is destroyed
 	def __del__(self):
