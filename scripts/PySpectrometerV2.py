@@ -10,6 +10,7 @@ import peakutils
 import base64
 import argparse
 import RPi.GPIO as GPIO
+import numpy
 
 #load = Image.open(r'/home/pi/Desktop/spectrum.png')
 load = Image.open(r'C:/Users/Douge/Pictures/spectrum.jfif')
@@ -173,15 +174,16 @@ class App:
 		GPIO.setup(15, GPIO.OUT)
 		GPIO.output(14, GPIO.HIGH)
 		sleep(0.5)
-		maxRed = peakutils.peak.indexes(graphdata[2], thres=0.999, min_dist=50)
+		maxRed = numpy.argmax(graphdata[2])
 		print(maxRed)
 		GPIO.output(14, GPIO.LOW)
 		GPIO.output(15, GPIO.HIGH)
 		sleep(0.5)
-		maxG = peakutils.peak.indexes(graphdata[2], thres=0.999, min_dist=50)
+		maxG = numpy.argmax(graphdata[2])
+		print(maxG)
 		GPIO.output(15, GPIO.LOW)
 		calibration = ((pointR, int(maxRed)),
-                       (pointG, int(maxG)))
+                       (pointG, 300))
 		self.vid.recalibrate(calibration)
 		self.calbutton.configure(text="Calibrated", fg="black",
                                     bg="yellow", activebackground='yellow')
