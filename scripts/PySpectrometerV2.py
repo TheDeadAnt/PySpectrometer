@@ -9,7 +9,7 @@ from scipy.signal import savgol_filter
 import peakutils
 import base64
 import argparse
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 import numpy
 
 #load = Image.open(r'/home/pi/Desktop/spectrum.png')
@@ -22,7 +22,7 @@ class App:
 	def __init__(self, args, window, window_title, video_source=0):
 		self.window = window
 
-		self.window.geometry("660x570")
+		self.window.geometry("780x630")
 		self.window.resizable(width=False, height=False)
 		self.window.title(window_title)
 		self.video_source = video_source
@@ -45,6 +45,10 @@ class App:
 		def savfilter(event):
 			# set object value when threshold slider moved.
 			setattr(self.vid, 'savpoly', event)
+
+		def moveSample(event):
+			# set object value when sample slider moved.
+			setattr(self.vid, 'sample', event)
 
 		def snapshot():
 			# Get a frame from the graph, and write it to disk
@@ -84,17 +88,17 @@ class App:
 		self.control_frame = tkinter.Frame(self.top_frame, width=324)
 		self.control_frame.grid(row=0, column=0, padx=0, pady=0)
 		self.decoration = tkinter.Canvas(
-			self.control_frame, width=300, height=146, borderwidth=2, relief="raised")
-		self.decoration.grid(row=0, column=0, columnspan=3, padx=0, pady=0)
+			self.control_frame, width=300, height=180, borderwidth=2, relief="raised")
+		self.decoration.grid(row=0, column=2, columnspan=3, padx=0, pady=0)
 
 		#control panel items:
 		# load the  image file
 		self.decorate = ImageTk.PhotoImage(load)
 		self.decoration.create_image(2, 2, image=self.decorate, anchor=tkinter.NW)
 		#calibrate button
-		self.calbutton = tkinter.Button(self.control_frame, text="Calibrate", width=6,
-		                                fg="yellow", bg="red", activebackground='red', command=lambda: self.calibrate(self.data()))
-		self.calbutton.grid(row=4, column=0)
+		self.calbutton = tkinter.Button(self.control_frame, text="Calibrate", width=20,height=2,
+						fg="yellow", bg="red", activebackground='red', command=lambda: self.calibrate(self.data()))
+		self.calbutton.grid(row=1, column=3,pady=10)
 
 		# display calibration data if provided
 		if args.calibration is not None:
@@ -125,7 +129,7 @@ class App:
 		#slider for peak width
 		self.peakwidth = tkinter.Scale(
 			self.bottom_frame, from_=0, to=100, orient="horizontal", command=peakwidth)
-		self.peakwidth.grid(row=1, column=1, padx=0, pady=2, sticky="n")
+		self.peakwidth.grid(row=1, column=1, padx=10, pady=2, sticky="n")
 		self.peakwidth.set(50)
 
 		#threshold label
@@ -135,7 +139,7 @@ class App:
 		#slider for threshold
 		self.thresh = tkinter.Scale(
 			self.bottom_frame, from_=0, to=100, orient="horizontal", command=peakthresh)
-		self.thresh.grid(row=1, column=3, padx=0, pady=2, sticky="n")
+		self.thresh.grid(row=1, column=3, padx=10, pady=2, sticky="n")
 		self.thresh.set(20)
 
 		#Filter label
@@ -145,18 +149,28 @@ class App:
 		#Slider for filter
 		self.filt = tkinter.Scale(self.bottom_frame, from_=0,
 		                          to=16, orient="horizontal", command=savfilter)
-		self.filt.grid(row=1, column=5, padx=0, pady=2, sticky="n")
+		self.filt.grid(row=1, column=5, padx=10, pady=2, sticky="n")
 		self.filt.set(7)
 
+		#Sample label
+		self.lbfilt = tkinter.Label(self.bottom_frame, text="Sample Row:")
+		self.lbfilt.grid(row=1, column=6, pady=20, sticky="n")
+
+		#Slider for sample
+		self.sample = tkinter.Scale(self.bottom_frame, from_=0,
+		                          to=479, orient="horizontal", command=moveSample)
+		self.sample.grid(row=1, column=7, padx=10, pady=2, sticky="n")
+		self.sample.set(318)
+
 		#Peak hold
-		self.peakholdbtn = tkinter.Button(self.bottom_frame, text="Peak Hold", width=6,
+		self.peakholdbtn = tkinter.Button(self.bottom_frame, text="Peak Hold", width=20,
 		                                  fg="black", bg="yellow", activebackground='yellow', command=peakhold)
-		self.peakholdbtn.grid(row=1, column=6, padx=0, pady=0)
+		self.peakholdbtn.grid(row=3, column=2, columnspan=2, padx=0, pady=0)
 
 		#Snapshot the graph
 		self.snapshotbtn = tkinter.Button(
-			self.bottom_frame, text="Snapshot", width=6, command=snapshot)
-		self.snapshotbtn.grid(row=1, column=7, padx=0, pady=0)
+			self.bottom_frame, text="Snapshot", fg="white", bg="blue", activebackground='yellow', width=20, command=snapshot)
+		self.snapshotbtn.grid(row=3, column=4, columnspan=2, padx=0, pady=0)
 
 		# After it is called once, the update method will be automatically called every delay milliseconds
 		self.delay = 15
@@ -216,6 +230,7 @@ class MyVideoCapture:
 		self.savpoly = 7  # savgol filter polynomial
 		self.intensity = [0] * 636  # array for intensity data...full of zeroes
 		self.holdpeaks = False
+		self.sample = 318
 
 		# Open the video source
 		self.vid = cv2.VideoCapture(video_source)
@@ -337,6 +352,7 @@ class MyVideoCapture:
 				image = frame
 				bwimage = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 				rows, cols = bwimage.shape
+				#print(rows)
 				#create a blank image for the data
 
 				graph = np.zeros([255, piwidth, 3], dtype=np.uint8)
@@ -379,7 +395,7 @@ class MyVideoCapture:
 						cv2.line(graph, (0, i), (piwidth, i), (100, 100, 100), 1)
 
 				#now process the data...
-				halfway = int(rows/2)  # halfway point to select a row of pixels from
+				halfway = int(self.sample)  # halfway point to select a row of pixels from
 
 				#pull out  single row of data and store in a self.intensity array
 				#Why -4 pixels? see notes on picam at beginning of file!
