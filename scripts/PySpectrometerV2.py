@@ -9,11 +9,11 @@ from scipy.signal import savgol_filter
 import peakutils
 import base64
 import argparse
-#import RPi.GPIO as GPIO
+import RPi.GPIO as GPIO
 import numpy
 
-#load = Image.open(r'/home/pi/Desktop/spectrum.png')
-load = Image.open(r'C:/Users/Douge/Pictures/spectrum.jfif')
+load = Image.open(r'/home/pi/Desktop/spectrum.png')
+#load = Image.open(r'C:/Users/Douge/Pictures/spectrum.jfif')
 
 
 class App:
@@ -160,7 +160,7 @@ class App:
 		self.sample = tkinter.Scale(self.bottom_frame, from_=0,
 		                          to=479, orient="horizontal", command=moveSample)
 		self.sample.grid(row=1, column=7, padx=10, pady=2, sticky="n")
-		self.sample.set(318)
+		self.sample.set(240)
 
 		#Peak hold
 		self.peakholdbtn = tkinter.Button(self.bottom_frame, text="Peak Hold", width=20,
@@ -230,7 +230,7 @@ class MyVideoCapture:
 		self.savpoly = 7  # savgol filter polynomial
 		self.intensity = [0] * 636  # array for intensity data...full of zeroes
 		self.holdpeaks = False
-		self.sample = 318
+		self.sample = 240
 
 		# Open the video source
 		self.vid = cv2.VideoCapture(video_source)
@@ -266,7 +266,6 @@ class MyVideoCapture:
 		# Get video source width and height
 		self.width = self.vid.get(cv2.CAP_PROP_FRAME_WIDTH)
 		self.height = self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
-		#print(self.width)
 
 	def recalibrate(self, calibration):
 		self.calibration = calibration
@@ -275,9 +274,11 @@ class MyVideoCapture:
 		if self.vid.isOpened():
 			ret, frame = self.vid.read()
 			if ret:
+				num = (int(self.sample))/2
+				y1 = int(num)
 				# Return a boolean success flag and the current frame converted to BGR
 				frame = cv2.resize(frame, (320, 240))  # resize the live image
-				cv2.line(frame, (0, 120), (320, 120), (255, 255, 255), 1)
+				cv2.line(frame, (0,y1) , (320,y1), (255, 255, 255), 1)
 				return (ret, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 			else:
 				return (ret, None)
