@@ -190,14 +190,17 @@ class App:
 		sleep(0.5)
 		maxRed = numpy.argmax(graphdata[2])
 		print(maxRed)
+		self.vid.get_frame()
+		sleep(1)
+		self.vid.get_frame()
 		GPIO.output(14, GPIO.LOW)
 		GPIO.output(15, GPIO.HIGH)
 		sleep(0.5)
 		maxG = numpy.argmax(graphdata[2])
 		print(maxG)
 		GPIO.output(15, GPIO.LOW)
-		calibration = ((pointR, int(maxRed)),
-                       (pointG, 300))
+		calibration = ((int(maxRed),pointR),
+                       (int(maxG),pointG))
 		self.vid.recalibrate(calibration)
 		self.calbutton.configure(text="Calibrated", fg="black",
                                     bg="yellow", activebackground='yellow')
