@@ -365,9 +365,9 @@ class MyVideoCapture:
 				#Display a graticule calibrated with cal data
 				#calculate the ranges
 				# how many px between points 1 and 2?
-				pxrange = 636#abs(self.calibration[0][0]-self.calibration[1][0])
+				pxrange = abs(self.calibration[0][0]-self.calibration[1][0])
 				# how many nm between points 1 and 2?
-				nmrange = 345#abs(self.calibration[0][1]-self.calibration[1][1])
+				nmrange = abs(self.calibration[0][1]-self.calibration[1][1])
 				#how many pixels per nm?
 				pxpernm = pxrange/nmrange
 				#how many nm per pixel?
