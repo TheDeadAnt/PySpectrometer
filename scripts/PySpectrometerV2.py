@@ -7,10 +7,11 @@ from time import sleep
 import numpy as np
 from scipy.signal import savgol_filter
 import peakutils
-import base64
+#import base64
 import argparse
 import RPi.GPIO as GPIO
 import numpy
+from multiprocessing import Process
 
 load = Image.open(r'/home/pi/Desktop/spectrum.png')
 #load = Image.open(r'C:/Users/Douge/Pictures/spectrum.jfif')
@@ -187,18 +188,21 @@ class App:
 		GPIO.setup(14, GPIO.OUT)
 		GPIO.setup(15, GPIO.OUT)
 		GPIO.output(14, GPIO.HIGH)
+		if __name__ == '__main__':
+			p = Process(target=self.vid.get_frame)
+			p.start()
+			p.join()
 		sleep(0.5)
 		maxRed = numpy.argmax(graphdata[2])
 		print(maxRed)
-		self.vid.get_frame()
-		sleep(1)
-		self.vid.get_frame()
 		GPIO.output(14, GPIO.LOW)
 		GPIO.output(15, GPIO.HIGH)
 		sleep(0.5)
 		maxG = numpy.argmax(graphdata[2])
 		print(maxG)
 		GPIO.output(15, GPIO.LOW)
+		if __name__ == '__main__':
+			p.join()
 		calibration = ((int(maxRed),pointR),
                        (int(maxG),pointG))
 		self.vid.recalibrate(calibration)
