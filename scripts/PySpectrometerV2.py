@@ -97,9 +97,13 @@ class App:
 		self.decorate = ImageTk.PhotoImage(load)
 		self.decoration.create_image(2, 2, image=self.decorate, anchor=tkinter.NW)
 		#calibrate button
-		self.calbutton = tkinter.Button(self.control_frame, text="Calibrate", width=20,height=2,
-                                  fg="yellow", bg="red", activebackground='red', command=lambda: self.calibrate(self.data()))
+		self.calbutton = tkinter.Button(self.control_frame, text="Calibrate Red", width=10,height=2,
+                                  fg="yellow", bg="red", activebackground='red', command=lambda: self.calibrateRed(self.data()))
 		self.calbutton.grid(row=1, column=3,pady=10)
+		#calibrate button
+		self.calbutton = tkinter.Button(self.control_frame, text="Calibrate Green", width=10, height=2,
+                                  fg="yellow", bg="green", activebackground='green', command=lambda: self.calibrateGreen(self.data()))
+		self.calbutton.grid(row=2, column=3, pady=10)
 
 		# display calibration data if provided
 		if args.calibration is not None:
@@ -107,7 +111,8 @@ class App:
 			#self.marker2.configure(text=str(args.calibration[1][0]))
 			#self.txt1.insert(0, str(args.calibration[0][1]))
 			#self.txt2.insert(0, str(args.calibration[1][1]))
-			self.calibrate()  # just to update the botton state, really
+			self.calibrateGreen()  # just to update the botton state, really
+			self.calibrateRed()
 
 		# Create a canvas that can fit the above video source size
 		#weird, we have to sub 3 pixels to have it fit?
@@ -179,10 +184,10 @@ class App:
 
 		self.window.mainloop()
 
-	def calibrate(self,graphdata):
+	def calibrateRed(self,graphdata):
 		#check the data is set, and modify the vars in self.vid...
 		pointR = 618.5
-		pointG = 568.5
+		#pointG = 568.5
 		GPIO.setmode(GPIO.BCM)
 		GPIO.setwarnings(False)
 		GPIO.setup(14, GPIO.OUT)
@@ -201,6 +206,25 @@ class App:
 		self.updateCalibration()
 		print(maxRed)
 		GPIO.output(14, GPIO.LOW)
+		self.updateCalibration()
+		self.updateCalibration()
+		self.updateCalibration()
+		#calibration = ((int(maxRed),pointR),
+                       #(0,0))
+		#self.vid.recalibrate(calibration)
+		self.calbutton.configure(text="Calibrated Red", fg="black",
+                                    bg="yellow", activebackground='yellow')
+
+	def calibrateGreen(self, graphdata, maxRed):
+		#check the data is set, and modify the vars in self.vid...
+		pointR = 618.5
+		pointG = 568.5
+		GPIO.setmode(GPIO.BCM)
+		GPIO.setwarnings(False)
+		GPIO.setup(14, GPIO.OUT)
+		GPIO.setup(15, GPIO.OUT)
+		GPIO.output(14, GPIO.HIGH)
+		GPIO.output(14, GPIO.LOW)
 		GPIO.output(15, GPIO.HIGH)
 		self.updateCalibration()
 		self.updateCalibration()
@@ -215,11 +239,10 @@ class App:
 		self.updateCalibration()
 		self.updateCalibration()
 		self.updateCalibration()
-		calibration = ((int(maxRed),pointR),
-                       (int(maxG),pointG))
+		calibration = ((int(maxRed), pointR),(int(maxG), pointG))
 		self.vid.recalibrate(calibration)
-		self.calbutton.configure(text="Calibrated", fg="black",
-                                    bg="yellow", activebackground='yellow')
+		self.calbutton.configure(text="Calibrated Green", fg="black",
+                           bg="yellow", activebackground='yellow')
 
 	def update(self):
 		# Get a frame from the video source
