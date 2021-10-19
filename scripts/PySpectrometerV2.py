@@ -98,7 +98,7 @@ class App:
 		self.decoration.create_image(2, 2, image=self.decorate, anchor=tkinter.NW)
 		#calibrate button
 		self.calbutton = tkinter.Button(self.control_frame, text="Calibrate", width=20,height=2,
-						fg="yellow", bg="red", activebackground='red', command=self.multi)
+                                  fg="yellow", bg="red", activebackground='red', command=lambda: self.calibrate(self.data()))
 		self.calbutton.grid(row=1, column=3,pady=10)
 
 		# display calibration data if provided
@@ -188,15 +188,33 @@ class App:
 		GPIO.setup(14, GPIO.OUT)
 		GPIO.setup(15, GPIO.OUT)
 		GPIO.output(14, GPIO.HIGH)
+		self.updateCalibration()
+		self.updateCalibration()
+		self.updateCalibration()
 		sleep(0.5)
+		self.updateCalibration()
+		self.updateCalibration()
+		self.updateCalibration()
 		maxRed = numpy.argmax(graphdata[2])
+		self.updateCalibration()
+		self.updateCalibration()
+		self.updateCalibration()
 		print(maxRed)
 		GPIO.output(14, GPIO.LOW)
 		GPIO.output(15, GPIO.HIGH)
+		self.updateCalibration()
+		self.updateCalibration()
+		self.updateCalibration()
 		sleep(0.5)
+		self.updateCalibration()
+		self.updateCalibration()
+		self.updateCalibration()
 		maxG = numpy.argmax(graphdata[2])
 		print(maxG)
 		GPIO.output(15, GPIO.LOW)
+		self.updateCalibration()
+		self.updateCalibration()
+		self.updateCalibration()
 		calibration = ((int(maxRed),pointR),
                        (int(maxG),pointG))
 		self.vid.recalibrate(calibration)
@@ -216,19 +234,22 @@ class App:
 			self.canvas1.create_image(0, 0, image=self.photo2, anchor=tkinter.NW)
 		self.window.after(self.delay, self.update)
 
+	def updateCalibration(self):
+		# Get a frame from the video source
+		ret, frame = self.vid.get_frame()
+		ret2, graphdata = self.vid.get_graph()
+		if ret:
+			self.photo = ImageTk.PhotoImage(image=Image.fromarray(frame))
+			self.canvas0.create_image(0, 0, image=self.photo, anchor=tkinter.NW)
+		if ret2:
+			self.photo2 = ImageTk.PhotoImage(
+				image=Image.fromarray(graphdata[0]))
+			self.canvas1.create_image(0, 0, image=self.photo2, anchor=tkinter.NW)
+
 	def data(self):
 		ret2, graphdata = self.vid.get_graph()
 		return graphdata
-
-	def multi(self):
-		if __name__ == '__main__':
-			p1 = Process(target=lambda: self.calibrate(self.data()))
-			p1.start()
-			p2 = Process(target = self.update)
-			p2.start()
-			# This is where I had to add the join() function.
-			p1.join()
-			p2.join()	
+	
 
 
 class MyVideoCapture:
