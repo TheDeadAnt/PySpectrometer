@@ -98,7 +98,7 @@ class App:
 		self.decoration.create_image(2, 2, image=self.decorate, anchor=tkinter.NW)
 		#calibrate button
 		self.calbutton = tkinter.Button(self.control_frame, text="Calibrate", width=20,height=2,
-						fg="yellow", bg="red", activebackground='red', command=lambda: self.calibrate(self.data()))
+						fg="yellow", bg="red", activebackground='red', command=self.multi)
 		self.calbutton.grid(row=1, column=3,pady=10)
 
 		# display calibration data if provided
@@ -188,10 +188,6 @@ class App:
 		GPIO.setup(14, GPIO.OUT)
 		GPIO.setup(15, GPIO.OUT)
 		GPIO.output(14, GPIO.HIGH)
-		if __name__ == '__main__':
-			p = Process(target=self.vid.get_frame)
-			p.start()
-			p.join()
 		sleep(0.5)
 		maxRed = numpy.argmax(graphdata[2])
 		print(maxRed)
@@ -201,8 +197,6 @@ class App:
 		maxG = numpy.argmax(graphdata[2])
 		print(maxG)
 		GPIO.output(15, GPIO.LOW)
-		if __name__ == '__main__':
-			p.join()
 		calibration = ((int(maxRed),pointR),
                        (int(maxG),pointG))
 		self.vid.recalibrate(calibration)
@@ -225,6 +219,16 @@ class App:
 	def data(self):
 		ret2, graphdata = self.vid.get_graph()
 		return graphdata
+
+	def multi(self):
+		if __name__ == '__main__':
+			p1 = Process(target=lambda: self.calibrate(self.data()))
+			p1.start()
+			p2 = Process(target = self.update)
+			p2.start()
+			# This is where I had to add the join() function.
+			p1.join()
+			p2.join()	
 
 
 class MyVideoCapture:
