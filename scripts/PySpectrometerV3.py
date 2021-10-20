@@ -50,10 +50,6 @@ class App:
 			# set object value when sample slider moved.
 			setattr(self.vid, 'sample', event)
 
-		def zoom(event):
-			# set object value when sample slider moved.
-			setattr(self.vid, 'zoom', event)
-
 		def snapshot():
 			# Get a frame from the graph, and write it to disk
 			ret, graphdata = self.vid.get_graph()
@@ -172,16 +168,6 @@ class App:
 		self.sample.grid(row=1, column=7, padx=10, pady=2, sticky="n")
 		self.sample.set(240)
 
-		#Zoom label
-		self.lbzoom = tkinter.Label(self.top_frame, text="Zoom:")
-		self.lbzoom.grid(row=0, column=8,padx=20, pady=0, sticky="n")
-
-		#Slider for zoom
-		self.zoom = tkinter.Scale(self.top_frame, from_=1,
-                            to=2, tickinterval=1, orient="vertical", command=zoom)
-		self.zoom.grid(row=0, column=8, padx=20, pady=30, sticky="n")
-		self.zoom.set(1)
-
 		#Peak hold
 		self.peakholdbtn = tkinter.Button(self.bottom_frame, text="Peak Hold", width=20,
 		                                  fg="black", bg="yellow", activebackground='yellow', command=peakhold)
@@ -199,9 +185,9 @@ class App:
 		GPIO.setup(15, GPIO.OUT)
 		GPIO.output(14, GPIO.HIGH)
 		GPIO.output(15, GPIO.HIGH)
+
 		self.delay = 15
 		self.update()
-		#print(graphdata)
 		self.window.mainloop()
 		
 
@@ -307,7 +293,7 @@ class MyVideoCapture:
 		self.intensity = [0] * 636  # array for intensity data...full of zeroes
 		self.holdpeaks = False
 		self.sample = 240
-		self.zoom = 1
+		self.zoom = 2
 
 		# Open the video source
 		self.vid = cv2.VideoCapture(video_source)
@@ -355,12 +341,8 @@ class MyVideoCapture:
 				y1 = int(num)
 				# Return a boolean success flag and the current frame converted to BGR
 				frame = cv2.resize(frame, (320, 240))
-				#frame = self.center_crop(frame, (160, 120))
 				frame = self.scale_image(frame, factor=int(self.zoom))
 				frame = self.center_crop(frame, (320, 240))
-				# resize the live image
-				#width, height = frame.shape[1], frame.shape[0]
-				#frame = cv2.resize(frame, (int(width*self.zoom), int(height*self.zoom)))
 				cv2.line(frame, (0,y1) , (320,y1), (255, 255, 255), 1)
 				return (ret, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 			else:
@@ -459,11 +441,14 @@ class MyVideoCapture:
 			if ret:
 				#Process the data...
 				#Why 636 pixels? see notes on picam at beginning of file!
+				frame = cv2.resize(frame, (320, 240))
+				frame = self.center_crop(frame, (160, 120))
+				frame = cv2.resize(frame, (640, 480))
 				piwidth = 636
 				image = frame
 				bwimage = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 				rows, cols = bwimage.shape
-				#print(rows)
+				#print(cols)
 				#create a blank image for the data
 
 				graph = np.zeros([255, piwidth, 3], dtype=np.uint8)
