@@ -8,12 +8,12 @@ import numpy as np
 from scipy.signal import savgol_filter
 import peakutils
 import argparse
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 import numpy
 
 
-load = Image.open(r'/home/pi/Desktop/spectrum.png')
-#load = Image.open(r'C:/Users/Douge/Pictures/spectrum.jfif')
+#load = Image.open(r'/home/pi/Desktop/spectrum.png')
+load = Image.open(r'C:/Users/Douge/Pictures/spectrum.jfif')
 
 
 class App:
@@ -179,12 +179,12 @@ class App:
 		self.snapshotbtn.grid(row=3, column=2, columnspan=2, padx=0, pady=0)
 
 		# After it is called once, the update method will be automatically called every delay milliseconds
-		GPIO.setmode(GPIO.BCM)
-		GPIO.setwarnings(False)
-		GPIO.setup(14, GPIO.OUT)
-		GPIO.setup(15, GPIO.OUT)
-		GPIO.output(14, GPIO.HIGH)
-		GPIO.output(15, GPIO.HIGH)
+		#GPIO.setmode(GPIO.BCM)
+		#GPIO.setwarnings(False)
+		#GPIO.setup(14, GPIO.OUT)
+		#GPIO.setup(15, GPIO.OUT)
+		#GPIO.output(14, GPIO.HIGH)
+		#GPIO.output(15, GPIO.HIGH)
 
 		self.delay = 15
 		self.update()
@@ -208,7 +208,8 @@ class App:
 		self.updateCalibration()
 		self.updateCalibration()
 		global maxRed
-		maxRed = numpy.argmax(graphdata[2])
+		elementR = numpy.argmax(graphdata[2])
+		maxRed = graphdata[1][elementR]
 		self.updateCalibration()
 		self.updateCalibration()
 		self.updateCalibration()
@@ -241,7 +242,8 @@ class App:
 		self.updateCalibration()
 		self.updateCalibration()
 		self.updateCalibration()
-		maxG = numpy.argmax(graphdata[2])
+		elementG = numpy.argmax(graphdata[2])
+		maxG = graphdata[1][elementG]
 		print(maxG)
 		GPIO.output(15, GPIO.LOW)
 		self.updateCalibration()
@@ -342,7 +344,8 @@ class MyVideoCapture:
 				# Return a boolean success flag and the current frame converted to BGR
 				frame = cv2.resize(frame, (320, 240))
 				frame = self.scale_image(frame, factor=int(self.zoom))
-				frame = self.center_crop(frame, (320, 240))
+				frame = self.center_crop(frame, (160, 120))
+				frame = cv2.resize(frame, (320, 240))
 				cv2.line(frame, (0,y1) , (320,y1), (255, 255, 255), 1)
 				return (ret, cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 			else:
@@ -442,7 +445,7 @@ class MyVideoCapture:
 				#Process the data...
 				#Why 636 pixels? see notes on picam at beginning of file!
 				frame = cv2.resize(frame, (320, 240))
-				frame = self.center_crop(frame, (160, 120))
+				frame = self.center_crop(frame, (80, 60))
 				frame = cv2.resize(frame, (640, 480))
 				piwidth = 636
 				image = frame
